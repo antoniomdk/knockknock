@@ -8,28 +8,26 @@ import platform
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+
+def show_desktop_notification(text: str, title: str):
+    # Check the OS
+    if platform.system() == "Darwin":
+        subprocess.run(["sh", "-c", "osascript -e 'display notification \"%s\" with title \"%s\"'" % (text, title)])
+
+    elif platform.system() == "Linux":
+        subprocess.run(["notify-send", title, text])
+
+    elif platform.system() == "Windows":
+        try:
+            from win10toast import ToastNotifier
+        except ImportError as err:
+            print('Error: to use Windows Desktop Notifications, you need to install `win10toast` first. Please run `pip install win10toast==0.9`.')
+
+        toaster = ToastNotifier()
+        toaster.show_toast(title, text, icon_path=None, duration=5)
+
+
 def desktop_sender(title: str = "knockknock"):
-    
-    def show_notification(text: str, title: str):
-        # Check the OS
-        if platform.system() == "Darwin":     
-            subprocess.run(["sh", "-c", "osascript -e 'display notification \"%s\" with title \"%s\"'" % (text, title)])
-        
-        elif platform.system() == "Linux":
-            subprocess.run(["notify-send", title, text])
-        
-        elif platform.system() == "Windows":
-            try:
-                from win10toast import ToastNotifier
-            except ImportError as err:
-                print('Error: to use Windows Desktop Notifications, you need to install `win10toast` first. Please run `pip install win10toast==0.9`.')
-
-            toaster = ToastNotifier()
-            toaster.show_toast(title,
-                               text,
-                               icon_path=None,
-                               duration=5)
-
     def decorator_sender(func):
         @functools.wraps(func)
         def wrapper_sender(*args, **kwargs):
@@ -55,7 +53,7 @@ def desktop_sender(title: str = "knockknock"):
                             'Main call: %s' % func_name,
                             'Starting date: %s' % start_time.strftime(DATE_FORMAT)]
                 text = '\n'.join(contents)
-                show_notification(text, title)
+                show_desktop_notification(text, title)
 
             try:
                 value = func(*args, **kwargs)
@@ -77,7 +75,7 @@ def desktop_sender(title: str = "knockknock"):
                         contents.append('Main call returned value: %s'% "ERROR - Couldn't str the returned value.")
 
                     text = '\n'.join(contents)
-                    show_notification(text, title)
+                    show_desktop_notification(text, title)
 
                 return value
 
@@ -95,7 +93,7 @@ def desktop_sender(title: str = "knockknock"):
                             "Traceback:",
                             '%s' % traceback.format_exc()]
                 text = '\n'.join(contents)
-                show_notification(text, title)
+                show_desktop_notification(text, title)
                 raise ex
 
         return wrapper_sender

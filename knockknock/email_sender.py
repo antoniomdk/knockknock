@@ -1,4 +1,5 @@
 import os
+from typing import *
 import datetime
 import traceback
 import functools
@@ -6,6 +7,19 @@ import socket
 import yagmail
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def create_yag_sender(recipient_emails: List[str], sender_email: Optional[str] = None):
+    if sender_email is None and len(recipient_emails) > 0:
+        sender_email = recipient_emails[0]
+    return yagmail.SMTP(sender_email)
+
+
+def send_email(yag_sender: yagmail.SMTP, recipient_emails: List[str], *args, **kwargs):
+    for i in range(len(recipient_emails)):
+        current_recipient = recipient_emails[i]
+        yag_sender.send(current_recipient, *args, **kwargs)
+
 
 def email_sender(recipient_emails: list, sender_email: str = None):
     """
@@ -20,9 +34,7 @@ def email_sender(recipient_emails: list, sender_email: str = None):
         address as the first recipient email in `recipient_emails`
         if length of `recipient_emails` is more than 0.
     """
-    if sender_email is None and len(recipient_emails) > 0:
-        sender_email = recipient_emails[0]
-    yag_sender = yagmail.SMTP(sender_email)
+    yag_sender = create_yag_sender(recipient_emails, sender_email)
 
     def decorator_sender(func):
         @functools.wraps(func)
@@ -48,9 +60,7 @@ def email_sender(recipient_emails: list, sender_email: str = None):
                             'Machine name: %s' % host_name,
                             'Main call: %s' % func_name,
                             'Starting date: %s' % start_time.strftime(DATE_FORMAT)]
-                for i in range(len(recipient_emails)):
-                    current_recipient = recipient_emails[i]
-                    yag_sender.send(current_recipient, 'Training has started 🎬', contents)
+                send_email(yag_sender, recipient_emails, 'Training has started 🎬', contents)
             try:
                 value = func(*args, **kwargs)
 
@@ -70,9 +80,7 @@ def email_sender(recipient_emails: list, sender_email: str = None):
                     except:
                         contents.append('Main call returned value: %s'% "ERROR - Couldn't str the returned value.")
 
-                    for i in range(len(recipient_emails)):
-                        current_recipient = recipient_emails[i]
-                        yag_sender.send(current_recipient, 'Training has sucessfully finished 🎉', contents)
+                    send_email(yag_sender, recipient_emails, 'Training has successfully finished 🎉', contents)
 
                 return value
 

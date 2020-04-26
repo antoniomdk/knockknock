@@ -9,6 +9,19 @@ import requests
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+
+def send_slack_message(webhook_url: str,
+                       channel: str,
+                       message: str,
+                       username="Knock Knock",
+                       icon_emoji: str = ":clapper:"):
+    dump = {"username": username,
+            "channel": channel,
+            'text': message,
+            'icon_emoji': icon_emoji}
+    return requests.post(webhook_url, json.dumps(dump))
+
+
 def slack_sender(webhook_url: str, channel: str, user_mentions: List[str] = []):
     """
     Slack sender wrapper: execute func, send a Slack notification with the end status
@@ -30,6 +43,7 @@ def slack_sender(webhook_url: str, channel: str, user_mentions: List[str] = []):
         "channel": channel,
         "icon_emoji": ":clapper:",
     }
+
     def decorator_sender(func):
         @functools.wraps(func)
         def wrapper_sender(*args, **kwargs):
@@ -53,11 +67,9 @@ def slack_sender(webhook_url: str, channel: str, user_mentions: List[str] = []):
                 contents = ['Your training has started 🎬',
                             'Machine name: %s' % host_name,
                             'Main call: %s' % func_name,
-                            'Starting date: %s' % start_time.strftime(DATE_FORMAT)]
-                contents.append(' '.join(user_mentions))
-                dump['text'] = '\n'.join(contents)
-                dump['icon_emoji'] = ':clapper:'
-                requests.post(webhook_url, json.dumps(dump))
+                            'Starting date: %s' % start_time.strftime(DATE_FORMAT),
+                            ' '.join(user_mentions)]
+                send_slack_message(webhook_url, channel, '\n'.join(contents))
 
             try:
                 value = func(*args, **kwargs)
@@ -74,14 +86,12 @@ def slack_sender(webhook_url: str, channel: str, user_mentions: List[str] = []):
 
                     try:
                         str_value = str(value)
-                        contents.append('Main call returned value: %s'% str_value)
+                        contents.append('Main call returned value: %s' % str_value)
                     except:
-                        contents.append('Main call returned value: %s'% "ERROR - Couldn't str the returned value.")
+                        contents.append('Main call returned value: %s' % "ERROR - Couldn't str the returned value.")
 
                     contents.append(' '.join(user_mentions))
-                    dump['text'] = '\n'.join(contents)
-                    dump['icon_emoji'] = ':tada:'
-                    requests.post(webhook_url, json.dumps(dump))
+                    send_slack_message(webhook_url, channel, '\n'.join(contents), icon_emoji=':tada:')
 
                 return value
 
@@ -96,12 +106,9 @@ def slack_sender(webhook_url: str, channel: str, user_mentions: List[str] = []):
                             'Crashed training duration: %s\n\n' % str(elapsed_time),
                             "Here's the error:",
                             '%s\n\n' % ex,
-                            "Traceback:",
-                            '%s' % traceback.format_exc()]
-                contents.append(' '.join(user_mentions))
-                dump['text'] = '\n'.join(contents)
-                dump['icon_emoji'] = ':skull_and_crossbones:'
-                requests.post(webhook_url, json.dumps(dump))
+                            "Traceback:", '%s' % traceback.format_exc(),
+                            ' '.join(user_mentions)]
+                send_slack_message(webhook_url, channel, '\n'.join(contents), icon_emoji=':skull_and_crossbones:')
                 raise ex
 
         return wrapper_sender
