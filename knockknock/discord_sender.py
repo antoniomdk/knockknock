@@ -9,6 +9,13 @@ import traceback
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+
+def send_message(webhook_url: str, text: str):
+    headers = {'Content-Type': 'application/json'}
+    payload = json.dumps({'content': text})
+    return requests.post(url=webhook_url, data=payload, headers=headers)
+
+
 def discord_sender(webhook_url: str):
     """
     Discord sender wrapper: execute func, send a Discord message with the end status
@@ -21,11 +28,7 @@ def discord_sender(webhook_url: str):
         set up your webhook and get your URL.
     """
     def decorator_sender(func):
-        def send_message(text: str):
-            headers = {'Content-Type': 'application/json'}
-            payload = json.dumps({'content': text})
-            r = requests.post(url=webhook_url, data=payload, headers=headers)
-        
+
         @functools.wraps(func)
         def wrapper_sender(*args, **kwargs):
 
@@ -50,7 +53,7 @@ def discord_sender(webhook_url: str):
                             'Main call: %s' % func_name,
                             'Starting date: %s' % start_time.strftime(DATE_FORMAT)]
                 text = '\n'.join(contents)
-                send_message(text=text)
+                send_message(webhook_url, text)
 
             try:
                 value = func(*args, **kwargs)
@@ -72,7 +75,7 @@ def discord_sender(webhook_url: str):
                         contents.append('Main call returned value: %s'% "ERROR - Couldn't str the returned value.")
 
                     text = '\n'.join(contents)
-                    send_message(text=text)
+                    send_message(webhook_url, text=text)
 
                 return value
 
@@ -90,7 +93,7 @@ def discord_sender(webhook_url: str):
                             "Traceback:",
                             '%s' % traceback.format_exc()]
                 text = '\n'.join(contents)
-                send_message(text=text)
+                send_message(webhook_url, text=text)
                 raise ex
 
         return wrapper_sender
